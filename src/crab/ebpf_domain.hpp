@@ -23,10 +23,10 @@
 #include "crab/split_dbm.hpp"
 
 #include "asm_ostream.hpp"
-#include "config.hpp"
+#include "crab_verifier.hpp"
 #include "dsl_syntax.hpp"
 #include "helpers.hpp"
-#include "spec_type_descriptors.hpp"
+#include "platform.hpp"
 
 #include "crab/array_domain.hpp"
 
@@ -489,11 +489,17 @@ class ebpf_domain_t final {
     void operator()(const ValidMapKeyValue& s) {
         using namespace dsl_syntax;
 
+        // Get the actual map_fd value to look up the key size and value size.
         auto fd_reg = reg_pack(s.map_fd_reg);
-        apply(m_inv, crab::bitwise_binop_t::LSHR, variable_t::map_value_size(), fd_reg.value, (number_t)14);
-        variable_t mk = variable_t::map_key_size();
-        apply(m_inv, crab::arith_binop_t::UREM, mk, fd_reg.value, (number_t)(1 << 14));
-        lshr(mk, 6);
+        interval_t fd_interval = operator[](fd_reg.value);
+        std::optional<number_t> fd_opt = fd_interval.singleton();
+        if (!fd_opt.has_value()) {
+            throw std::runtime_error(std::string("map_fd is not a singleton"));
+        }
+        number_t map_fd = *fd_opt;
+        EbpfMapDescriptor& map_descriptor = global_program_info.platform->get_map_descriptor((int)map_fd);
+        m_inv.assign(variable_t::map_value_size(), (int)map_descriptor.value_size);
+        m_inv.assign(variable_t::map_key_size(), (int)map_descriptor.key_size);
 
         auto access_reg = reg_pack(s.access_reg);
 
@@ -1060,7 +1066,7 @@ class ebpf_domain_t final {
         if (dom.is_bottom()) {
             o << "_|_";
         } else {
-            o << dom.m_inv << "\n" << dom.stack;
+            o << "Invariants: " << dom.m_inv << "\nStack: " << dom.stack;
         }
         return o;
     }
