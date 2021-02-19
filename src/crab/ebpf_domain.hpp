@@ -492,14 +492,21 @@ class ebpf_domain_t final {
         // Get the actual map_fd value to look up the key size and value size.
         auto fd_reg = reg_pack(s.map_fd_reg);
         interval_t fd_interval = operator[](fd_reg.value);
-        std::optional<number_t> fd_opt = fd_interval.singleton();
-        if (!fd_opt.has_value()) {
-            throw std::runtime_error(std::string("map_fd is not a singleton"));
+        if (fd_interval.is_bottom()) {
+            m_inv.set(variable_t::map_value_size(), interval_t::bottom());
+            m_inv.set(variable_t::map_key_size(), interval_t::bottom());
+        } else {
+            std::optional<number_t> fd_opt = fd_interval.singleton();
+            if (fd_opt.has_value()) {
+                number_t map_fd = *fd_opt;
+                EbpfMapDescriptor& map_descriptor = global_program_info.platform->get_map_descriptor((int)map_fd);
+                m_inv.assign(variable_t::map_value_size(), (int)map_descriptor.value_size);
+                m_inv.assign(variable_t::map_key_size(), (int)map_descriptor.key_size);
+            } else {
+                m_inv.set(variable_t::map_value_size(), interval_t::top());
+                m_inv.set(variable_t::map_key_size(), interval_t::top());
+            }
         }
-        number_t map_fd = *fd_opt;
-        EbpfMapDescriptor& map_descriptor = global_program_info.platform->get_map_descriptor((int)map_fd);
-        m_inv.assign(variable_t::map_value_size(), (int)map_descriptor.value_size);
-        m_inv.assign(variable_t::map_key_size(), (int)map_descriptor.key_size);
 
         auto access_reg = reg_pack(s.access_reg);
 
