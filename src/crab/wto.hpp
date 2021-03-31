@@ -183,7 +183,7 @@ class wto_vertex_t final {
     explicit wto_vertex_t(vertex_descriptor_t node) : _node(std::move(node)) {}
 
   public:
-    vertex_descriptor_t node() { return this->_node; }
+    vertex_descriptor_t node() const { return this->_node; }
 
     friend std::ostream& operator<<(std::ostream& o, const wto_vertex_t& vertex);
 
@@ -208,7 +208,7 @@ class wto_cycle_t final {
     using iterator = wto_component_list_t::iterator;
     using const_iterator = wto_component_list_t::const_iterator;
 
-    vertex_descriptor_t head() { return this->_head; }
+    vertex_descriptor_t head() const { return this->_head; }
 
     iterator begin() { return _wto_components.begin(); }
 
