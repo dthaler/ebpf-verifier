@@ -269,7 +269,7 @@ array_domain_t::kill_and_find_var(crab_verifier_job_t* job, NumAbsDomain& inv, d
     if (!cells.empty()) {
         // Forget the scalars from the numerical domain
         for (auto c : cells) {
-            inv -= c.get_scalar(kind);
+            inv -= c.get_scalar(job->variable_factory(), kind);
         }
         // Remove the cells. If needed again they they will be re-created.
         offset_map -= cells;
@@ -307,7 +307,7 @@ std::optional<linear_expression_t> array_domain_t::load(NumAbsDomain& inv, data_
             // Here it's ok to do assignment (instead of expand)
             // because c is not a summarized variable. Otherwise, it
             // would be unsound.
-            return c.get_scalar(kind);
+            return c.get_scalar(_job->variable_factory(), kind);
         } else {
             CRAB_WARN("Ignored read from cell ", kind, "[", o, "...", o + size - 1, "]",
                       " because it overlaps with ", cells.size(), " cells");
@@ -340,7 +340,7 @@ std::optional<variable_t> array_domain_t::store(NumAbsDomain& inv, data_kind_t k
             else
                 num_bytes.havoc(offset, size);
         }
-        variable_t v = _job->lookup_array_map(kind).mk_cell(offset, size).get_scalar(kind);
+        variable_t v = _job->lookup_array_map(kind).mk_cell(offset, size).get_scalar(_job->variable_factory(), kind);
         return v;
     }
     return {};

@@ -78,7 +78,7 @@ class interleaved_fwd_fixpoint_iterator_t final {
   public:
     explicit interleaved_fwd_fixpoint_iterator_t(cfg_t& cfg, crab_verifier_job_t* job, unsigned int descending_iterations,
                                                  bool check_termination)
-        : _cfg(cfg), _wto(cfg), _job(job), _descending_iterations(descending_iterations),
+        : _job(job), _cfg(cfg), _wto(cfg), _descending_iterations(descending_iterations),
           check_termination(check_termination) {
         for (const auto& label : _cfg.labels()) {
             _pre.emplace(label, ebpf_domain_t::bottom());

@@ -37,15 +37,6 @@ struct reg_pack_t {
     variable_t value, offset, type;
 };
 
-inline reg_pack_t reg_pack(int i) {
-    return {
-       variable_t::reg(data_kind_t::values, i),
-       variable_t::reg(data_kind_t::offsets, i),
-       variable_t::reg(data_kind_t::types, i),
-    };
-}
-inline reg_pack_t reg_pack(Reg r) { return reg_pack(r.v); }
-
 inline linear_constraint_t eq(variable_t a, variable_t b) {
     using namespace dsl_syntax;
     return {a - b, constraint_kind_t::EQUALS_ZERO};
@@ -292,6 +283,19 @@ class ebpf_domain_t final {
         return inv;
     }
 
+    static reg_pack_t reg_pack(variable_factory_t& factory, int i) {
+        return {
+            factory.reg(data_kind_t::values, i),
+            factory.reg(data_kind_t::offsets, i),
+            factory.reg(data_kind_t::types, i),
+        };
+    }
+    static reg_pack_t reg_pack(variable_factory_t& factory, Reg r) { return reg_pack(factory, r.v); }
+
+    variable_factory_t& variable_factory();
+    reg_pack_t reg_pack(int i) { return reg_pack(variable_factory(), i); }
+    reg_pack_t reg_pack(Reg r) { return reg_pack(variable_factory(), r); }
+
     void scratch_caller_saved_registers() {
         for (int i = R1_ARG; i <= R5_ARG; i++) {
             auto reg = reg_pack(i);
@@ -400,14 +404,14 @@ class ebpf_domain_t final {
         }
         if (check_termination) {
             // +1 to avoid being tricked by empty loops
-            add(variable_t::instruction_count(), z_number((unsigned)bb.size() + 1));
+            add(variable_factory().instruction_count(), z_number((unsigned)bb.size() + 1));
         }
     }
 
     bool terminates() {
         using namespace crab::dsl_syntax;
         constexpr int max_instructions = 100000;
-        return m_inv.entail(variable_t::instruction_count() <= max_instructions);
+        return m_inv.entail(variable_factory().instruction_count() <= max_instructions);
     }
 
     void operator()(Assume const& s) {
@@ -509,26 +513,26 @@ class ebpf_domain_t final {
         auto fd_reg = reg_pack(s.map_fd_reg);
         interval_t fd_interval = operator[](fd_reg.value);
         if (fd_interval.is_bottom()) {
-            m_inv.set(variable_t::map_value_size(), interval_t::bottom());
-            m_inv.set(variable_t::map_key_size(), interval_t::bottom());
+            m_inv.set(variable_factory().map_value_size(), interval_t::bottom());
+            m_inv.set(variable_factory().map_key_size(), interval_t::bottom());
         } else {
             std::optional<number_t> fd_opt = fd_interval.singleton();
             if (fd_opt.has_value()) {
                 number_t map_fd = *fd_opt;
                 const program_info& info = get_program_info();
                 const EbpfMapDescriptor& map_descriptor = info.platform->get_map_descriptor((int)map_fd, info);
-                m_inv.assign(variable_t::map_value_size(), (int)map_descriptor.value_size);
-                m_inv.assign(variable_t::map_key_size(), (int)map_descriptor.key_size);
+                m_inv.assign(variable_factory().map_value_size(), (int)map_descriptor.value_size);
+                m_inv.assign(variable_factory().map_key_size(), (int)map_descriptor.key_size);
             } else {
-                m_inv.set(variable_t::map_value_size(), interval_t::top());
-                m_inv.set(variable_t::map_key_size(), interval_t::top());
+                m_inv.set(variable_factory().map_value_size(), interval_t::top());
+                m_inv.set(variable_factory().map_key_size(), interval_t::top());
             }
         }
 
         auto access_reg = reg_pack(s.access_reg);
 
         variable_t lb = access_reg.offset;
-        variable_t width = s.key ? variable_t::map_key_size() : variable_t::map_value_size();
+        variable_t width = s.key ? variable_factory().map_key_size() : variable_factory().map_value_size();
         linear_expression_t ub = lb + width;
         std::string m = std::string(" (") + to_string(s) + ")";
         require(m_inv, access_reg.type >= T_STACK, "Only stack or packet can be used as a parameter" + m);
@@ -585,12 +589,13 @@ class ebpf_domain_t final {
     NumAbsDomain check_access_packet(NumAbsDomain inv, const linear_expression_t& lb, const linear_expression_t& ub, const std::string& s,
                                      bool is_comparison_check) {
         using namespace dsl_syntax;
-        require(inv, lb >= variable_t::meta_offset(), std::string("Lower bound must be at least meta_offset") + s);
+        require(inv, lb >= variable_factory().meta_offset(),
+                std::string("Lower bound must be at least meta_offset") + s);
         if (is_comparison_check)
             require(inv, ub <= MAX_PACKET_OFF,
                     std::string("Upper bound must be at most ") + std::to_string(MAX_PACKET_OFF) + s);
         else
-            require(inv, ub <= variable_t::packet_size(),
+            require(inv, ub <= variable_factory().packet_size(),
                     std::string("Upper bound must be at most packet_size") + s);
         return inv;
     }
@@ -713,9 +718,9 @@ class ebpf_domain_t final {
         if (addr == desc.data) {
             inv.assign(target.offset, 0);
         } else if (addr == desc.end) {
-            inv.assign(target.offset, variable_t::packet_size());
+            inv.assign(target.offset, variable_factory().packet_size());
         } else if (addr == desc.meta) {
-            inv.assign(target.offset, variable_t::meta_offset());
+            inv.assign(target.offset, variable_factory().meta_offset());
         } else {
             inv -= target.offset;
             if (may_touch_ptr)
@@ -907,7 +912,7 @@ class ebpf_domain_t final {
             m_inv += 0 <= r0.value;
             m_inv += r0.value <= PTR_MAX;
             assign(r0.offset, 0);
-            assign(r0.type, variable_t::map_value_size());
+            assign(r0.type, variable_factory().map_value_size());
         } else {
             havoc(r0.offset);
             assign(r0.type, T_NUM);
@@ -1096,33 +1101,36 @@ class ebpf_domain_t final {
         return o;
     }
 
+    static variable_factory_t& get_variable_factory(crab_verifier_job_t* job);
+
     static ebpf_domain_t setup_entry(bool check_termination, crab_verifier_job_t* job) {
         using namespace dsl_syntax;
 
         ebpf_domain_t inv(job);
+        variable_factory_t& variable_factory = get_variable_factory(job);
 
-        auto r10 = reg_pack(R10_STACK_POINTER);
+        auto r10 = reg_pack(variable_factory, R10_STACK_POINTER);
         inv += EBPF_STACK_SIZE <= r10.value;
         inv += r10.value <= PTR_MAX;
         inv.assign(r10.offset, EBPF_STACK_SIZE);
         inv.assign(r10.type, T_STACK);
 
-        auto r1 = reg_pack(R1_ARG);
+        auto r1 = reg_pack(variable_factory, R1_ARG);
         inv += 1 <= r1.value;
         inv += r1.value <= PTR_MAX;
         inv.assign(r1.offset, 0);
         inv.assign(r1.type, T_CTX);
 
-        inv += 0 <= variable_t::packet_size();
-        inv += variable_t::packet_size() < MAX_PACKET_OFF;
+        inv += 0 <= variable_factory.packet_size();
+        inv += variable_factory.packet_size() < MAX_PACKET_OFF;
         if (inv.get_program_info().type.context_descriptor.meta >= 0) {
-            inv += variable_t::meta_offset() <= 0;
-            inv += variable_t::meta_offset() >= -4098;
+            inv += variable_factory.meta_offset() <= 0;
+            inv += variable_factory.meta_offset() >= -4098;
         } else {
-            inv.assign(variable_t::meta_offset(), 0);
+            inv.assign(variable_factory.meta_offset(), 0);
         }
         if (check_termination) {
-            inv.assign(variable_t::instruction_count(), 0);
+            inv.assign(variable_factory.instruction_count(), 0);
         }
         return inv;
     }

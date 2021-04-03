@@ -120,7 +120,9 @@ class cell_t final {
 
     [[nodiscard]] offset_t get_offset() const { return _offset; }
 
-    [[nodiscard]] variable_t get_scalar(data_kind_t kind) const { return variable_t::cell_var(kind, _offset, _size); }
+    [[nodiscard]] variable_t get_scalar(variable_factory_t& factory, data_kind_t kind) const {
+        return factory.cell_var(kind, _offset, _size);
+    }
 
     // ignore the scalar variable
     bool operator==(const cell_t& o) const { return to_interval() == o.to_interval(); }
@@ -233,8 +235,8 @@ class offset_map_t final {
 using array_map_t = std::unordered_map<data_kind_t, offset_map_t>;
 
 class array_domain_t final {
-    bitset_domain_t num_bytes;
     crab_verifier_job_t* _job;
+    bitset_domain_t num_bytes;
 
   private:
     static std::optional<std::pair<offset_t, unsigned>>
