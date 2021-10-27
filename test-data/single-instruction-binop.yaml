@@ -93,6 +93,8 @@ post:
   - r7.type=number
   - r7.value=[3, 5]
   - r2.packet_offset=r7.value
+  - packet_size-r2.numeric_size<=5
+  - r2.numeric_size-packet_size<=-3
 
 ---
 test-case: add constant register pointer to interval number
@@ -111,6 +113,10 @@ post:
   - r2.packet_offset=0
   - r2.packet_offset-r7.packet_offset<=-3
   - r7.packet_offset-r2.packet_offset<=5
+  - r7.packet_offset-r7.value<=-7
+  - r7.value-r7.packet_offset<=11
+  - packet_size-r7.numeric_size<=5
+  - r7.numeric_size-packet_size<=-3
 
 ---
 test-case: subtract dual-typed pointers
