@@ -228,3 +228,52 @@ post:
 messages:
   - "8: only numbers can be added to pointers (r2.type = ptr -> r3.type = number)"
   - "8: only numbers can be added to pointers (r3.type = ptr -> r2.type = number)"
+---
+test-case: multiple types compare
+
+pre: ["r0.type=number",
+      "r6.type=stack", "r6.stack_offset=4",
+      "r7.type=stack", "r7.stack_offset=0",
+      "r8.type=packet", "r8.packet_offset=4",
+      "r9.type=packet", "r9.packet_offset=0",
+      "meta_offset=0"]
+
+code:
+  <start>: |
+    if r0 == 0 goto <packet>
+  <stack>: |
+    r1 = r6
+    r2 = r7
+    goto <join>
+  <packet>: |
+    r1 = r8
+    r2 = r9
+    goto <join>
+  <join>: |
+    if r1 == r2 goto <out> ; trigger same_type(r1, r2)
+    r0 = 42
+  <out>: |
+    exit
+
+post:
+  - meta_offset=0
+  - r0.type=number
+  - r0.value=42
+  - r1.stack_offset=4
+  - r1.packet_offset=4
+  - r1.type in {packet, stack}
+  - r1.type=r2.type
+  - r2.stack_offset=0
+  - r2.packet_offset=0
+  - r2.type in {packet, stack}
+  - r6.type=stack
+  - r6.stack_offset=4
+  - r7.type=stack
+  - r7.stack_offset=0
+  - r8.type=packet
+  - r8.packet_offset=4
+  - r9.type=packet
+  - r9.packet_offset=0
+
+messages:
+  - "7:9: Code is unreachable after 7:9"
