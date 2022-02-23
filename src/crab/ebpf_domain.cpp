@@ -1485,8 +1485,7 @@ void ebpf_domain_t::operator()(const Bin& bin) {
                     }
                 });
             } else {
-                // We're not sure that lhs and rhs are the same type.
-                // Either they're different, or at least one is not a singleton.
+                // lhs and rhs have different types.
                 if (type_inv.get_type(m_inv, std::get<Reg>(bin.v)) != T_NUM) {
                     type_inv.havoc_type(m_inv, bin.dst);
                     havoc(dst.value);
