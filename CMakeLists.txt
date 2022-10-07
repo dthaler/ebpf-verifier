@@ -85,6 +85,7 @@ add_library(ebpfverifier ${LIB_SRC})
 add_executable(check src/main/check.cpp src/main/linux_verifier.cpp)
 add_executable(tests ${ALL_TEST})
 add_executable(run_yaml src/main/run_yaml.cpp)
+add_executable(conformance_check src/test/conformance_check.cpp)
 
 set_target_properties(check
         PROPERTIES
@@ -95,6 +96,10 @@ set_target_properties(tests
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/..")
 
 set_target_properties(run_yaml
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/..")
+
+set_target_properties(conformance_check
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/..")
 
@@ -116,6 +121,7 @@ target_compile_options(check PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_FLAGS}>")
 target_compile_options(check PUBLIC "$<$<CONFIG:SANITIZE>:${SANITIZE_FLAGS}>")
 target_link_libraries(check PRIVATE ebpfverifier)
 
+
 target_compile_options(tests PRIVATE ${COMMON_FLAGS})
 target_compile_options(tests PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_FLAGS}>")
 target_compile_options(tests PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_FLAGS}>")
@@ -131,3 +137,4 @@ target_link_libraries(ebpfverifier PRIVATE ${YAML_CPP_LIBRARIES})
 target_compile_options(ebpfverifier PRIVATE ${COMMON_FLAGS})
 
 target_link_libraries(run_yaml PRIVATE ebpfverifier)
+target_link_libraries(conformance_check PRIVATE ebpfverifier)

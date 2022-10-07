@@ -234,6 +234,23 @@ std::optional<Failure> run_yaml_test_case(const TestCase& test_case) {
     };
 }
 
+std::optional<Failure> run_conformance_test_case(const TestCase& test_case) {
+    ebpf_context_descriptor_t context_descriptor{64, -1, -1, -1};
+    EbpfProgramType program_type = make_program_type("conformance_check", &context_descriptor);
+
+    program_info info{&g_platform_test, {}, program_type};
+
+    std::ostringstream ss;
+    const auto& [pre_invs, post_invs] = ebpf_analyze_program_for_test(
+        ss, test_case.instruction_seq, test_case.assumed_pre_invariant, info, test_case.options);
+    std::set<string> actual_messages = extract_messages(ss.str());
+
+    const auto& actual_last_invariant = pre_invs.at(label_t::exit);
+    if (actual_last_invariant == test_case.expected_post_invariant && actual_messages == test_case.expected_messages)
+        return {};
+    return Failure{.invariant = make_diff(actual_last_invariant, test_case.expected_post_invariant),
+                   .messages = make_diff(actual_messages, test_case.expected_messages)};
+}
 
 void print_failure(const Failure& failure, std::ostream& out) {
     constexpr auto INDENT = "  ";
