@@ -245,7 +245,7 @@ static vector<T> vector_of(std::vector<uint8_t> bytes) {
 }
 
 bool run_conformance_test_case(std::vector<uint8_t> memory_bytes, std::vector<uint8_t> program_bytes,
-                               uint64_t* r0_value) {
+                               uint64_t* r0_value, bool debug) {
     ebpf_context_descriptor_t context_descriptor{64, -1, -1, -1};
     EbpfProgramType program_type = make_program_type("conformance_check", &context_descriptor);
 
@@ -306,9 +306,11 @@ bool run_conformance_test_case(std::vector<uint8_t> memory_bytes, std::vector<ui
         auto& prog = std::get<InstructionSeq>(prog_or_error);
 
         ebpf_verifier_options_t options = ebpf_verifier_default_options;
-        options.print_failures = true;
-        options.print_invariants = true;
-        options.no_simplify = true;
+        if (debug) {
+            options.print_failures = true;
+            options.print_invariants = true;
+            options.no_simplify = true;
+        }
 
         std::ostringstream ss;
         const auto& [pre_invs, post_invs] =

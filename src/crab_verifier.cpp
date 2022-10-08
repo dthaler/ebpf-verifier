@@ -209,6 +209,13 @@ ebpf_analyze_program_for_test(std::ostream& os, const InstructionSeq& prog, cons
     cfg_t cfg = prepare_cfg(prog, info, !options.no_simplify, false);
     auto [pre_invariants, post_invariants] = crab::run_forward_analyzer(cfg, entry_inv, options.check_termination);
     checks_db report = generate_report(cfg, pre_invariants, post_invariants);
+    if (thread_local_options.print_invariants) {
+        for (const label_t& label : cfg.sorted_labels()) {
+            std::cout << "\nPre-invariant : " << pre_invariants.at(label) << "\n";
+            std::cout << cfg.get_node(label);
+            std::cout << "\nPost-invariant: " << post_invariants.at(label) << "\n";
+        }
+    }
     print_report(os, report, prog, false);
 
     return {

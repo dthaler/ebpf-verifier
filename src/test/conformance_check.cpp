@@ -127,7 +127,7 @@ main(int argc, char** argv)
     }
 
     uint64_t r0_value;
-    bool result = run_conformance_test_case(base16_decode(memory_string), base16_decode(program_string), &r0_value);
+    bool result = run_conformance_test_case(base16_decode(memory_string), base16_decode(program_string), &r0_value, debug);
     if (!result) {
         if (debug) {
             std::cerr << "Verification failed\n";
