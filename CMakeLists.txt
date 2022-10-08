@@ -22,6 +22,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     exec_program(${NUGET} ARGS install "Boost" -Version 1.78.0 -ExcludeVersion -OutputDirectory ${CMAKE_BINARY_DIR}/packages)
   endif()
   set(Boost_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/packages/boost/lib/native/include)
+  set(Boost_LIBRARY_DIRS ${CMAKE_BINARY_DIR}/packages/boost_filesystem-vc142/lib/native)
+
   # MSVC's C++17 standard option doesn't actually support all the C++17
   # features we use, but its "latest" option does.  However, cmake can't
   # deal with that here, so we set it below.
@@ -58,6 +60,7 @@ file(GLOB LIB_SRC
 
 file(GLOB ALL_TEST
         "./src/test/test.cpp"
+        "./src/test/test_conformance.cpp"
         "./src/test/test_loop.cpp"
         "./src/test/test_marshal.cpp"
         "./src/test/test_print.cpp"
@@ -108,6 +111,9 @@ target_compile_options(ebpfverifier PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_FLAGS}>")
 target_compile_options(ebpfverifier PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_FLAGS}>")
 target_compile_options(ebpfverifier PUBLIC "$<$<CONFIG:SANITIZE>:${SANITIZE_FLAGS}>")
 
+set(BOOST_VERSION 1.78.0)
+add_subdirectory("external/bpf_conformance")
+
 # CMake derives a Visual Studio project GUID from the file path but can be overridden via a property
 # (see https://gitlab.kitware.com/cmake/cmake/-/commit/c85367f4).  Using a non-constant GUID
 # can cause problems if other projects/repos want to reference the ebpfverifier vcxproj file,
@@ -121,12 +127,13 @@ target_compile_options(check PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_FLAGS}>")
 target_compile_options(check PUBLIC "$<$<CONFIG:SANITIZE>:${SANITIZE_FLAGS}>")
 target_link_libraries(check PRIVATE ebpfverifier)
 
-
+message("Boost_LIBRARY_DIRS: ${Boost_LIBRARY_DIRS}")
 target_compile_options(tests PRIVATE ${COMMON_FLAGS})
 target_compile_options(tests PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_FLAGS}>")
 target_compile_options(tests PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_FLAGS}>")
 target_compile_options(tests PUBLIC "$<$<CONFIG:SANITIZE>:${SANITIZE_FLAGS}>")
 target_link_libraries(tests PRIVATE ebpfverifier)
+target_link_libraries(tests PRIVATE bpf_conformance)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -138,6 +145,3 @@ target_compile_options(ebpfverifier PRIVATE ${COMMON_FLAGS})
 
 target_link_libraries(run_yaml PRIVATE ebpfverifier)
 target_link_libraries(conformance_check PRIVATE ebpfverifier)
-
-# TODO: incorporate back here so we can reuse boost
-add_subdirectory("external/bpf_conformance")

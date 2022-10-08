@@ -284,12 +284,19 @@ bool run_conformance_test_case(std::vector<uint8_t> memory_bytes, std::vector<ui
                             "].value=" + std::to_string(value));
                 offset += 2;
             }
-            while (offset < EBPF_STACK_SIZE) {
+            if (offset % 8 != 0) {
                 uint32_t value;
                 memcpy(&value, memory_bytes.data() + offset + memory_bytes.size() - EBPF_STACK_SIZE, sizeof(value));
                 more.insert("s[" + std::to_string(offset) + "..." + std::to_string(offset + 3) +
                             "].value=" + std::to_string(value));
                 offset += 4;
+            }
+            while (offset < EBPF_STACK_SIZE) {
+                int64_t value;
+                memcpy(&value, memory_bytes.data() + offset + memory_bytes.size() - EBPF_STACK_SIZE, sizeof(value));
+                more.insert("s[" + std::to_string(offset) + "..." + std::to_string(offset + 7) +
+                            "].value=" + std::to_string(value));
+                offset += 8;
             }
 
             pre_invariant = pre_invariant + string_invariant(more);

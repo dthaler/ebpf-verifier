@@ -3,11 +3,10 @@
 #pragma once
 
 // This program reads BPF instructions from stdin and memory contents from
-// the first agument. It then executes the BPF program and prints the
+// the first argument. It then executes the BPF program and prints the
 // value of r0 at the end of execution.
 // The program is intended to be used with the bpf conformance test suite.
 
-//#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <optional>
@@ -38,50 +37,6 @@ base16_decode(const std::string& input)
     }
     return output;
 }
-
-#if 0
-/**
- * @brief Convert a vector of bytes to a vector of bpf_insn.
- *
- * @param[in] bytes Vector of bytes.
- * @return Vector of bpf_insn.
- */
-std::vector<bpf_insn>
-bytes_to_ebpf_inst(std::vector<uint8_t> bytes)
-{
-    std::vector<bpf_insn> instructions(bytes.size() / sizeof(bpf_insn));
-    memcpy(instructions.data(), bytes.data(), bytes.size());
-    return instructions;
-}
-
-/**
- * @brief Create a prolog that loads the packet memory into R1 and the lenght into R2.
- *
- * @param[in] size Expected size of the packet.
- * @return Vector of bpf_insn that represents the prolog.
- */
-std::vector<bpf_insn>
-generate_xdp_prolog(int size)
-{
-    // Create a prolog that converts the BPF program to one that can be loaded
-    // at the XDP attach point.
-    // This involves:
-    // 1. Copying the ctx->data into r1.
-    // 2. Copying the ctx->data_end - ctx->data into r2.
-    // 3. Satisfying the verifier that r2 is the length of the packet.
-    return {
-        {0xb7, 0x0, 0x0, 0x0, -1},   // mov64 r0, -1
-        {0xbf, 0x6, 0x1, 0x0, 0x0},  // mov r6, r1
-        {0x61, 0x1, 0x6, 0x0, 0x0},  // ldxw r1, [r6+0]
-        {0x61, 0x2, 0x6, 0x4, 0x0},  // ldxw r2, [r6+4]
-        {0xbf, 0x3, 0x1, 0x0, 0x0},  // mov r3, r1
-        {0x7, 0x3, 0x0, 0x0, size},  // add r3, size
-        {0xbd, 0x3, 0x2, 0x1, 0x0},  //  jle r3, r2, +1
-        {0x95, 0x0, 0x0, 0x0, 0x0},  // exit
-        {0xb7, 0x2, 0x0, 0x0, size}, // mov r2, size
-    };
-}
-#endif
 
 /**
  * @brief This program reads BPF instructions from stdin and memory contents from
@@ -136,8 +91,7 @@ main(int argc, char** argv)
     }
 
     // Print output.
-    // Note that bpf_conformance only supports checking the low 32 bits of r0.
-    std::cout << std::hex << (uint32_t)r0_value << std::endl;
+    std::cout << std::hex << r0_value << std::endl;
 
     return 0;
 }
