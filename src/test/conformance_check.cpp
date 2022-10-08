@@ -92,10 +92,25 @@ int
 main(int argc, char** argv)
 {
     bool debug = false;
-    std::vector<std::string> args(argv + 1, argv + argc - 1);
+    std::vector<std::string> args(argv, argv + argc);
+    if (args.size() > 0) {
+        args.erase(args.begin());
+    }
     std::string program_string;
     std::string memory_string;
-    std::getline(std::cin, program_string);
+
+    if (args.size() > 0 && args[0] == "--help") {
+        std::cout << "usage: " << argv[0] << " [--program <base16 program bytes>] [<base16 memory bytes>] [--debug]\n";
+        return 1;
+    }
+
+    if (args.size() > 1 && args[0] == "--program") {
+        args.erase(args.begin());
+        program_string = args[0];
+        args.erase(args.begin());
+    } else {
+        std::getline(std::cin, program_string);
+    }
 
     // First parameter is optional memory contents.
     if (args.size() > 0 && args[0] != "--debug") {
@@ -111,46 +126,18 @@ main(int argc, char** argv)
         return 1;
     }
 
-    std::vector<bpf_insn> program = bytes_to_ebpf_inst(base16_decode(program_string));
-    std::vector<uint8_t> memory = base16_decode(memory_string);
-
-    // Add prolog if program accesses memory.
-    if (memory.size() > 0) {
-        auto prolog_instructions = generate_xdp_prolog(memory.size());
-        program.insert(program.begin(), prolog_instructions.begin(), prolog_instructions.end());
-    }
-
-    // Load program into kernel.
-    std::string log;
-    log.resize(1024);
-    int fd = bpf_load_program(
-        BPF_PROG_TYPE_XDP,
-        reinterpret_cast<const bpf_insn*>(program.data()),
-        static_cast<uint32_t>(program.size()),
-        "MIT",
-        0,
-        &log[0],
-        log.size());
-    if (fd < 0) {
-        if (debug)
-            std::cerr << "Failed to load program: " << log << std::endl;
-        return 1;
-    }
-
-    // Run program.
-    uint32_t output_value = 0;
-    unsigned int out_size = memory.size();
-    uint32_t duration;
-    int result =
-        bpf_prog_test_run(fd, 1, memory.data(), memory.size(), memory.data(), &out_size, &output_value, &duration);
-    if (result != 0) {
-        if (debug)
-            std::cerr << "Failed to run program: " << result << std::endl;
+    uint64_t r0_value;
+    bool result = run_conformance_test_case(base16_decode(memory_string), base16_decode(program_string), &r0_value);
+    if (!result) {
+        if (debug) {
+            std::cerr << "Verification failed\n";
+        }
         return 1;
     }
 
     // Print output.
-    std::cout << std::hex << output_value << std::endl;
+    // Note that bpf_conformance only supports checking the low 32 bits of r0.
+    std::cout << std::hex << (uint32_t)r0_value << std::endl;
 
     return 0;
 }

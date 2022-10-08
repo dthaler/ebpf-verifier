@@ -138,3 +138,6 @@ target_compile_options(ebpfverifier PRIVATE ${COMMON_FLAGS})
 
 target_link_libraries(run_yaml PRIVATE ebpfverifier)
 target_link_libraries(conformance_check PRIVATE ebpfverifier)
+
+# TODO: incorporate back here so we can reuse boost
+add_subdirectory("external/bpf_conformance")

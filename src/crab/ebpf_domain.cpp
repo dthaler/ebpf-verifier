@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "boost/endian.hpp"
 #include "boost/range/algorithm/set_algorithm.hpp"
 
 #include "crab_utils/stats.hpp"
@@ -673,11 +674,98 @@ void ebpf_domain_t::operator()(const Un& stmt) {
     auto dst = reg_pack(stmt.dst);
     switch (stmt.op) {
     case Un::Op::BE16:
+        if (m_inv.entail(type_is_number(stmt.dst))) {
+            auto dst = reg_pack(stmt.dst);
+            auto interval = m_inv.eval_interval(dst.value);
+            if (std::optional<number_t> n = interval.singleton()) {
+                if (n->fits_uint64()) {
+                    uint16_t input = (uint16_t)(uint64_t)n.value();
+                    uint16_t output = boost::endian::load_big_u16((unsigned char*)&input);
+                    m_inv.set(dst.value, crab::interval_t(output, output));
+                    break;
+                }
+            }
+        }
+        havoc(dst.value);
+        havoc_offsets(stmt.dst);
+        break;
     case Un::Op::BE32:
+        if (m_inv.entail(type_is_number(stmt.dst))) {
+            auto dst = reg_pack(stmt.dst);
+            auto interval = m_inv.eval_interval(dst.value);
+            if (std::optional<number_t> n = interval.singleton()) {
+                if (n->fits_uint64()) {
+                    uint32_t input = (uint32_t)(uint64_t)n.value();
+                    uint32_t output = boost::endian::load_big_u32((unsigned char*)&input);
+                    m_inv.set(dst.value, crab::interval_t(output, output));
+                    break;
+                }
+            }
+        }
+        havoc(dst.value);
+        havoc_offsets(stmt.dst);
+        break;
     case Un::Op::BE64:
+        if (m_inv.entail(type_is_number(stmt.dst))) {
+            auto dst = reg_pack(stmt.dst);
+            auto interval = m_inv.eval_interval(dst.value);
+            if (std::optional<number_t> n = interval.singleton()) {
+                if (n->fits_uint64()) {
+                    uint64_t input = (uint64_t)n.value();
+                    uint32_t output = boost::endian::load_big_u64((unsigned char*)&input);
+                    m_inv.set(dst.value, crab::interval_t(output, output));
+                    break;
+                }
+            }
+        }
+        havoc(dst.value);
+        havoc_offsets(stmt.dst);
+        break;
     case Un::Op::LE16:
+        if (m_inv.entail(type_is_number(stmt.dst))) {
+            auto dst = reg_pack(stmt.dst);
+            auto interval = m_inv.eval_interval(dst.value);
+            if (std::optional<number_t> n = interval.singleton()) {
+                if (n->fits_uint64()) {
+                    uint16_t input = (uint16_t)(uint64_t)n.value();
+                    uint16_t output = boost::endian::load_little_u16((unsigned char*)&input);
+                    m_inv.set(dst.value, crab::interval_t(output, output));
+                    break;
+                }
+            }
+        }
+        havoc(dst.value);
+        havoc_offsets(stmt.dst);
+        break;
     case Un::Op::LE32:
+        if (m_inv.entail(type_is_number(stmt.dst))) {
+            auto dst = reg_pack(stmt.dst);
+            auto interval = m_inv.eval_interval(dst.value);
+            if (std::optional<number_t> n = interval.singleton()) {
+                if (n->fits_uint64()) {
+                    uint32_t input = (uint32_t)(uint64_t)n.value();
+                    uint32_t output = boost::endian::load_little_u32((unsigned char*)&input);
+                    m_inv.set(dst.value, crab::interval_t(output, output));
+                    break;
+                }
+            }
+        }
+        havoc(dst.value);
+        havoc_offsets(stmt.dst);
+        break;
     case Un::Op::LE64:
+        if (m_inv.entail(type_is_number(stmt.dst))) {
+            auto dst = reg_pack(stmt.dst);
+            auto interval = m_inv.eval_interval(dst.value);
+            if (std::optional<number_t> n = interval.singleton()) {
+                if (n->fits_uint64()) {
+                    uint64_t input = (uint64_t)n.value();
+                    uint32_t output = boost::endian::load_little_u64((unsigned char*)&input);
+                    m_inv.set(dst.value, crab::interval_t(output, output));
+                    break;
+                }
+            }
+        }
         havoc(dst.value);
         havoc_offsets(stmt.dst);
         break;
@@ -1028,17 +1116,17 @@ void ebpf_domain_t::do_load_stack(NumAbsDomain& inv, const Reg& target_reg, cons
     if (width == 1 || width == 2 || width == 4 || width == 8) {
         inv.assign(target.value, stack.load(inv,  data_kind_t::values, addr, width));
 
-        if (type_inv.has_type(m_inv, target.type, T_CTX))
+        if (type_inv.has_type(inv, target.type, T_CTX))
             inv.assign(target.ctx_offset, stack.load(inv, data_kind_t::ctx_offsets, addr, width));
-        if (type_inv.has_type(m_inv, target.type, T_MAP) || type_inv.has_type(m_inv, target.type, T_MAP_PROGRAMS))
+        if (type_inv.has_type(inv, target.type, T_MAP) || type_inv.has_type(inv, target.type, T_MAP_PROGRAMS))
             inv.assign(target.map_fd, stack.load(inv, data_kind_t::map_fds, addr, width));
-        if (type_inv.has_type(m_inv, target.type, T_PACKET))
+        if (type_inv.has_type(inv, target.type, T_PACKET))
             inv.assign(target.packet_offset, stack.load(inv, data_kind_t::packet_offsets, addr, width));
-        if (type_inv.has_type(m_inv, target.type, T_SHARED)) {
+        if (type_inv.has_type(inv, target.type, T_SHARED)) {
             inv.assign(target.shared_offset, stack.load(inv, data_kind_t::shared_offsets, addr, width));
             inv.assign(target.shared_region_size, stack.load(inv, data_kind_t::shared_region_sizes, addr, width));
         }
-        if (type_inv.has_type(m_inv, target.type, T_STACK)) {
+        if (type_inv.has_type(inv, target.type, T_STACK)) {
             inv.assign(target.stack_offset, stack.load(inv, data_kind_t::stack_offsets, addr, width));
             inv.assign(target.stack_numeric_size, stack.load(inv, data_kind_t::stack_numeric_sizes, addr, width));
         }
