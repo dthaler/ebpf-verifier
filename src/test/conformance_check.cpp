@@ -45,6 +45,7 @@ base16_decode(const std::string& input)
 int
 main(int argc, char** argv)
 {
+    std::cerr << "argc: " << argc << std::endl;
     bool debug = false;
     std::vector<std::string> args(argv, argv + argc);
     if (args.size() > 0) {
@@ -65,11 +66,13 @@ main(int argc, char** argv)
     } else {
         std::getline(std::cin, program_string);
     }
+    std::cerr << "program_string: " << program_string << std::endl;
 
     // First parameter is optional memory contents.
     if (args.size() > 0 && args[0] != "--debug") {
         memory_string = args[0];
         args.erase(args.begin());
+        std::cerr << "memory_string: " << memory_string << std::endl;
     }
     if (args.size() > 0 && args[0] == "--debug") {
         debug = true;
