@@ -1,5 +1,6 @@
 // Copyright (c) Prevail Verifier contributors.
 // SPDX-License-Identifier: MIT
+#include <iostream>
 #include "catch.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
 #include "../external/bpf_conformance/include/bpf_conformance.h"
@@ -14,6 +15,8 @@ void test_conformance(std::string filename, bpf_conformance_test_result_t expect
     boost::filesystem::path extension = test_path.extension();
     std::filesystem::path plugin_path =
         test_path.remove_filename().append("conformance_check" + extension.string()).string();
+    std::cout << "EXECUTING " << plugin_path << " " << plugin_options << "\n";
+    std::cout << "FROM " << std::filesystem::current_path() << "\n";
     std::map<std::filesystem::path, std::tuple<bpf_conformance_test_result_t, std::string>> result =
         bpf_conformance(test_files, plugin_path, plugin_options, list_opcodes_tested);
     for (auto file : test_files) {
