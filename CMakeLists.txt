@@ -134,6 +134,7 @@ target_compile_options(tests PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_FLAGS}>")
 target_compile_options(tests PUBLIC "$<$<CONFIG:SANITIZE>:${SANITIZE_FLAGS}>")
 target_link_libraries(tests PRIVATE ebpfverifier)
 target_link_libraries(tests PRIVATE bpf_conformance)
+target_link_libraries(tests PRIVATE ${CMAKE_DL_LIBS})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)

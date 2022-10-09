@@ -680,7 +680,7 @@ void ebpf_domain_t::operator()(const Un& stmt) {
             if (std::optional<number_t> n = interval.singleton()) {
                 if (n->fits_uint64()) {
                     uint16_t input = (uint16_t)(uint64_t)n.value();
-                    uint16_t output = boost::endian::load_big_u16((unsigned char*)&input);
+                    uint16_t output = boost::endian::native_to_big(input);
                     m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
                     break;
                 }
@@ -696,7 +696,7 @@ void ebpf_domain_t::operator()(const Un& stmt) {
             if (std::optional<number_t> n = interval.singleton()) {
                 if (n->fits_uint64()) {
                     uint32_t input = (uint32_t)(uint64_t)n.value();
-                    uint32_t output = boost::endian::load_big_u32((unsigned char*)&input);
+                    uint32_t output = boost::endian::native_to_big(input);
                     m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
                     break;
                 }
@@ -712,7 +712,7 @@ void ebpf_domain_t::operator()(const Un& stmt) {
             if (std::optional<number_t> n = interval.singleton()) {
                 if (n->fits_sint64()) {
                     int64_t input = (int64_t)n.value();
-                    int64_t output = boost::endian::load_big_s64((unsigned char*)&input);
+                    int64_t output = boost::endian::native_to_big(input);
                     m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
                     break;
                 }
@@ -728,7 +728,7 @@ void ebpf_domain_t::operator()(const Un& stmt) {
             if (std::optional<number_t> n = interval.singleton()) {
                 if (n->fits_uint64()) {
                     uint16_t input = (uint16_t)(uint64_t)n.value();
-                    uint16_t output = boost::endian::load_little_u16((unsigned char*)&input);
+                    uint16_t output = boost::endian::native_to_little(input);
                     m_inv.set(dst.value, crab::interval_t(output, output));
                     break;
                 }
@@ -744,7 +744,7 @@ void ebpf_domain_t::operator()(const Un& stmt) {
             if (std::optional<number_t> n = interval.singleton()) {
                 if (n->fits_uint64()) {
                     uint32_t input = (uint32_t)(uint64_t)n.value();
-                    uint32_t output = boost::endian::load_little_u32((unsigned char*)&input);
+                    uint32_t output = boost::endian::native_to_little(input);
                     m_inv.set(dst.value, crab::interval_t(output, output));
                     break;
                 }
@@ -760,7 +760,7 @@ void ebpf_domain_t::operator()(const Un& stmt) {
             if (std::optional<number_t> n = interval.singleton()) {
                 if (n->fits_uint64()) {
                     uint64_t input = (uint64_t)n.value();
-                    uint32_t output = boost::endian::load_little_u64((unsigned char*)&input);
+                    uint32_t output = boost::endian::native_to_little(input);
                     m_inv.set(dst.value, crab::interval_t(output, output));
                     break;
                 }
@@ -1584,7 +1584,8 @@ void ebpf_domain_t::operator()(const Bin& bin) {
                             input &= UINT32_MAX;
                         }
                         uint64_t output = (int64_t)(input >> imm);
-                        m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
+                        m_inv.set(dst.value, crab::interval_t(number_t((unsigned long long)output),
+                                                              number_t((unsigned long long)output)));
                         break;
                     }
                 }
@@ -1603,7 +1604,8 @@ void ebpf_domain_t::operator()(const Bin& bin) {
                             input = (int32_t)(input & UINT32_MAX);
                         }
                         int64_t output = (int64_t)(input >> imm);
-                        m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
+                        m_inv.set(dst.value, crab::interval_t(number_t((signed long long)output),
+                                                              number_t((signed long long)output)));
                         break;
                     }
                 }
@@ -1763,7 +1765,7 @@ void ebpf_domain_t::operator()(const Bin& bin) {
                             input &= UINT32_MAX;
                         }
                         uint64_t output = (int64_t)(input >> (int64_t)src_n.value());
-                        m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
+                        m_inv.set(dst.value, crab::interval_t(number_t((unsigned long long)output), number_t((unsigned long long)output)));
                         break;
                     }
                 }

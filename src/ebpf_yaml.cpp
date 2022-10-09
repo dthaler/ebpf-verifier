@@ -327,7 +327,7 @@ bool run_conformance_test_case(std::vector<uint8_t> memory_bytes, std::vector<ui
         *r0_value = 0;
         const auto& actual_last_invariant = pre_invs.at(label_t::exit);
         for (std::string invariant : actual_last_invariant.value()) {
-            if (invariant.starts_with("r0.value=")) {
+            if (invariant.rfind("r0.value=", 0) == 0) {
                 *r0_value = std::stoull(invariant.substr(9));
                 return actual_messages.empty();
             }
