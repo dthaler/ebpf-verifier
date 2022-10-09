@@ -45,42 +45,40 @@ base16_decode(const std::string& input)
 int
 main(int argc, char** argv)
 {
-    std::cerr << "argc: " << argc << std::endl;
     bool debug = false;
     std::vector<std::string> args(argv, argv + argc);
-    if (args.size() > 0) {
-        args.erase(args.begin());
-    }
     std::string program_string;
     std::string memory_string;
 
-    if (args.size() > 0 && args[0] == "--help") {
-        std::cout << "usage: " << argv[0] << " [--program <base16 program bytes>] [<base16 memory bytes>] [--debug]\n";
+    for (int argindex = 1; argindex < argc; argindex++) {
+        std::string arg = argv[argindex];
+        if (arg.empty()) {
+            continue;
+        }
+        if (arg == "--help") {
+            std::cerr << "usage: " << argv[0]
+                      << " [--program <base16 program bytes>] [<base16 memory bytes>] [--debug]\n";
+            return 1;
+        }
+        if ((arg == "--program") && (argindex + 1 < argc)) {
+            program_string = argv[argindex + 1];
+            argindex++;
+            continue;
+        }
+        if (arg == "--debug") {
+            debug = true;
+            continue;
+        }
+        if (memory_string.empty()) {
+            memory_string = arg;
+            continue;
+        }
+        std::cerr << "Unexpected argument: " << arg << std::endl;
         return 1;
     }
 
-    if (args.size() > 1 && args[0] == "--program") {
-        args.erase(args.begin());
-        program_string = args[0];
-        args.erase(args.begin());
-    } else {
+    if (program_string.empty()) {
         std::getline(std::cin, program_string);
-    }
-    std::cerr << "program_string: " << program_string << std::endl;
-
-    // First parameter is optional memory contents.
-    if (args.size() > 0 && args[0] != "--debug") {
-        memory_string = args[0];
-        args.erase(args.begin());
-        std::cerr << "memory_string: " << memory_string << std::endl;
-    }
-    if (args.size() > 0 && args[0] == "--debug") {
-        debug = true;
-        args.erase(args.begin());
-    }
-    if (args.size() > 0) {
-        std::cerr << "Unexpected arguments: " << args[0] << std::endl;
-        return 1;
     }
 
     uint64_t r0_value;
