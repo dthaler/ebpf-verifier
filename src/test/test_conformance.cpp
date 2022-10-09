@@ -12,7 +12,9 @@ void test_conformance(std::string filename, bpf_conformance_test_result_t expect
     bool list_opcodes_tested = false;
     std::string plugin_options;
     boost::filesystem::path test_path = boost::dll::program_location();
+    std::cout << "TEST_PATH " << test_path << "\n";
     boost::filesystem::path extension = test_path.extension();
+    std::cout << "EXTENSION " << extension << "\n";
     std::filesystem::path plugin_path =
         test_path.remove_filename().append("conformance_check" + extension.string()).string();
     std::cout << "EXECUTING " << plugin_path << " " << plugin_options << "\n";
