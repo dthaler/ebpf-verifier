@@ -27,6 +27,7 @@ void test_conformance(std::string filename, bpf_conformance_test_result_t expect
         test_conformance(filename, bpf_conformance_test_result_t::TEST_RESULT_PASS); \
     }
 
+// Some tests don't pass yet, but ought to in the future.
 #define TEST_CONFORMANCE_FAIL(filename) \
     TEST_CASE("conformance_check " filename, "[conformance]") {  \
         test_conformance(filename, bpf_conformance_test_result_t::TEST_RESULT_FAIL); \
@@ -35,11 +36,11 @@ void test_conformance(std::string filename, bpf_conformance_test_result_t expect
 TEST_CONFORMANCE("add.data")
 TEST_CONFORMANCE("add64.data")
 TEST_CONFORMANCE("alu-arith.data")
-TEST_CONFORMANCE_FAIL("alu-bit.data")
+TEST_CONFORMANCE("alu-bit.data")
 TEST_CONFORMANCE("alu64-arith.data")
 TEST_CONFORMANCE_FAIL("alu64-bit.data")
 TEST_CONFORMANCE_FAIL("arsh-reg.data")
-TEST_CONFORMANCE_FAIL("arsh.data")
+TEST_CONFORMANCE("arsh.data")
 TEST_CONFORMANCE_FAIL("arsh32-high-shift.data")
 TEST_CONFORMANCE_FAIL("arsh64.data")
 TEST_CONFORMANCE_FAIL("be16-high.data")
@@ -92,7 +93,7 @@ TEST_CONFORMANCE_FAIL("ldxw.data")
 TEST_CONFORMANCE("le16.data")
 TEST_CONFORMANCE("le32.data")
 TEST_CONFORMANCE("le64.data")
-TEST_CONFORMANCE_FAIL("lsh-reg.data")
+TEST_CONFORMANCE("lsh-reg.data")
 TEST_CONFORMANCE_FAIL("mem-len.data")
 TEST_CONFORMANCE("mod-by-zero-reg.data")
 TEST_CONFORMANCE("mod.data")
@@ -108,8 +109,8 @@ TEST_CONFORMANCE("mul64-reg.data")
 TEST_CONFORMANCE("neg.data")
 TEST_CONFORMANCE("neg64.data")
 TEST_CONFORMANCE_FAIL("prime.data")
-TEST_CONFORMANCE_FAIL("rsh-reg.data")
-TEST_CONFORMANCE_FAIL("rsh32.data")
+TEST_CONFORMANCE("rsh-reg.data")
+TEST_CONFORMANCE("rsh32.data")
 TEST_CONFORMANCE_FAIL("stack.data")
 TEST_CONFORMANCE("stb.data")
 TEST_CONFORMANCE("stdw.data")

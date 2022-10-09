@@ -1575,11 +1575,39 @@ void ebpf_domain_t::operator()(const Bin& bin) {
             havoc_offsets(bin.dst);
             break;
         case Bin::Op::RSH:
+            if (m_inv.entail(type_is_number(bin.dst))) {
+                auto interval = m_inv.eval_interval(dst.value);
+                if (std::optional<number_t> n = interval.singleton()) {
+                    if (n->fits_sint64()) {
+                        uint64_t input = (uint64_t)(int64_t)n.value();
+                        if (!bin.is64) {
+                            input &= UINT32_MAX;
+                        }
+                        uint64_t output = (int64_t)(input >> imm);
+                        m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
+                        break;
+                    }
+                }
+            }
             // avoid signedness and overflow issues in lshr(dst.value, imm);
             havoc(dst.value);
             havoc_offsets(bin.dst);
             break;
         case Bin::Op::ARSH:
+            if (m_inv.entail(type_is_number(bin.dst))) {
+                auto interval = m_inv.eval_interval(dst.value);
+                if (std::optional<number_t> n = interval.singleton()) {
+                    if (n->fits_sint64()) {
+                        int64_t input = (int64_t)n.value();
+                        if (!bin.is64) {
+                            input = (int32_t)(input & UINT32_MAX);
+                        }
+                        int64_t output = (int64_t)(input >> imm);
+                        m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
+                        break;
+                    }
+                }
+            }
             // avoid signedness and overflow issues in ashr(dst.value, imm);
             // = (int64_t)dst >> imm;
             havoc(dst.value);
@@ -1723,6 +1751,23 @@ void ebpf_domain_t::operator()(const Bin& bin) {
             havoc_offsets(bin.dst);
             break;
         case Bin::Op::RSH:
+            if (m_inv.entail(type_is_number(bin.dst)) && m_inv.entail(type_is_number(std::get<Reg>(bin.v)))) {
+                auto dst_interval = m_inv.eval_interval(dst.value);
+                auto src_interval = m_inv.eval_interval(src.value);
+                std::optional<number_t> dst_n = dst_interval.singleton();
+                std::optional<number_t> src_n = src_interval.singleton();
+                if (dst_n && src_n) {
+                    if (dst_n->fits_sint64() && src_n->fits_sint64()) {
+                        uint64_t input = (uint64_t)(int64_t)dst_n.value();
+                        if (!bin.is64) {
+                            input &= UINT32_MAX;
+                        }
+                        uint64_t output = (int64_t)(input >> (int64_t)src_n.value());
+                        m_inv.set(dst.value, crab::interval_t(number_t(output), number_t(output)));
+                        break;
+                    }
+                }
+            }
             havoc(dst.value);
             havoc_offsets(bin.dst);
             break;
