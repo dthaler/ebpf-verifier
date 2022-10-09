@@ -36,4 +36,4 @@ jobs:
           cmake --build build -j $(nproc)
 
       - name: Run unit tests
-        run: ./tests -d yes
+        run: ./tests -d yes [conformance]
