@@ -1,6 +1,5 @@
 // Copyright (c) Prevail Verifier contributors.
 // SPDX-License-Identifier: MIT
-#pragma once
 
 // This program reads BPF instructions from stdin and memory contents from
 // the first argument. It then executes the BPF program and prints the
