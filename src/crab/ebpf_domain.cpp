@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "boost/endian.hpp"
+#include "boost/endian/conversion.hpp"
 #include "boost/range/algorithm/set_algorithm.hpp"
 
 #include "crab_utils/stats.hpp"
