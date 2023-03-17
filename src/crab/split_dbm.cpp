@@ -1035,7 +1035,7 @@ void SplitDBM::forget(const variable_vector_t& variables) {
     normalize();
 }
 
-static std::string to_string(variable_t vd, variable_t vs, const SafeInt64DefaultParams::Weight& w, bool eq) {
+static std::string to_string(variable_t vd, variable_t vs, const SplitDBM::Params::Weight& w, bool eq) {
     std::stringstream elem;
     if (eq) {
         if (w.operator>(0))
