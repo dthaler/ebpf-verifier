@@ -476,6 +476,10 @@ kill_and_find_var(NumAbsDomain& inv, data_kind_t kind, const linear_expression_t
         // Forget the scalars from the numerical domain
         for (auto const& c : cells) {
             inv -= c.get_scalar(kind);
+            if (kind == data_kind_t::svalues) {
+                // Forget signed and unsigned values together.
+                inv -= c.get_scalar(data_kind_t::uvalues);
+            }
         }
         // Remove the cells. If needed again they they will be re-created.
         offset_map -= cells;

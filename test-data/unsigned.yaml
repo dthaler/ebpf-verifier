@@ -704,7 +704,9 @@ code:
     assume r1 >= r2
 post: ["r1.type=number", "r1.svalue=9223372036854775803", "r1.uvalue=9223372036854775803", "r1.svalue=r1.uvalue",
         "r2.type=number", "r2.svalue=9223372036854775803", "r2.uvalue=9223372036854775803",
-        "r2.uvalue-r1.svalue<=0",  # missing: r1.svalue-r2.svalue<=0; probably avoiding overflow in SplitDBM
+        "r2.uvalue-r1.svalue<=0",  # missing: r1.svalue-r2.uvalue<=0; probably avoiding overflow in SplitDBM
+        "r2.svalue-r1.svalue<=0",  # missing: r1.svalue-r2.svalue<=0; probably avoiding overflow in SplitDBM
+        "r2.svalue-r1.uvalue<=0",  # missing: r1.uvalue-r2.svalue<=0; probably avoiding overflow in SplitDBM
         "r2.uvalue-r1.uvalue<=0"]  # missing: r1.uvalue-r2.uvalue<=0; probably avoiding overflow in SplitDBM
 ---
 test-case: "assume [0, INT32_MAX] w>= INT32_MAX narrows to INT32_MAX"
@@ -715,8 +717,16 @@ code:
     assume w1 >= r2
 post: ["r1.type=number", "r1.svalue=2147483647", "r1.uvalue=2147483647", "r1.svalue=r1.uvalue",
         "r2.type=number", "r2.svalue=2147483647", "r2.uvalue=2147483647",
-        "r2.uvalue-r1.svalue<=0",  # missing: r1.uvalue-r2.svalue<=0; probably avoiding overflow in SplitDBM
+        "r2.uvalue-r1.svalue<=0",  # missing: r1.svalue-r2.uvalue<=0; probably avoiding overflow in SplitDBM
+        "r2.svalue-r1.svalue<=0",  # missing: r1.svalue-r2.svalue<=0; probably avoiding overflow in SplitDBM
+        "r2.svalue-r1.uvalue<=0",  # missing: r1.uvalue-r2.svalue<=0; probably avoiding overflow in SplitDBM
         "r2.uvalue-r1.uvalue<=0"]  # missing: r1.uvalue-r2.uvalue<=0; probably avoiding overflow in SplitDBM
+---
+test-case: "assume 4294967301 w>= 5 nop"
+pre: ["r1.type=number", "r1.svalue=4294967301", "r1.uvalue=4294967301"]
+code:
+  <start>: assume w1 >= 5
+post: ["r1.type=number", "r1.svalue=4294967301", "r1.uvalue=4294967301"]
 ---
 test-case: "assume [-1, 1] > 0 nop"
 pre: ["r1.type=number", "r1.svalue=[-1, 1]"]
@@ -746,7 +756,8 @@ code:
   <start>: |
     assume r1 > r2
 post: ["r1.type=number", "r1.svalue=-1", "r1.uvalue=18446744073709551615",
-       "r2.type=number", "r2.svalue=[1, 2]", "r2.uvalue=[1, 2]", "r2.svalue=r2.uvalue"]
+       "r2.type=number", "r2.svalue=[1, 2]", "r2.uvalue=[1, 2]", "r2.svalue=r2.uvalue",
+       "r2.svalue-r1.uvalue<=-1", "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume [-1, 1] >= 2 narrows"
 pre: ["r1.type=number", "r1.svalue=[-1, 1]"]
@@ -762,35 +773,36 @@ code:
   <start>: |
     assume r1 > r2
 post: ["r1.type=number", "r1.svalue=-1", "r1.uvalue=18446744073709551615",
-       "r2.type=number", "r2.svalue=[2, 3]", "r2.uvalue=[2, 3]", "r2.svalue=r2.uvalue"]
+       "r2.type=number", "r2.svalue=[2, 3]", "r2.uvalue=[2, 3]", "r2.svalue=r2.uvalue",
+       "r2.svalue-r1.uvalue<=-1", "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume [-1, 1] < -1 narrows"
 pre: ["r1.type=number", "r1.svalue=[-1, 1]"]
 code:
   <start>: |
     assume r1 < -1
-post: ["r1.type=number", "r1.svalue=[0, 1]", "r1.uvalue=[0, 1]", "r1.svalue=r1.uvalue"]
+post: ["r1.type=number", "r1.svalue=[0, 1]", "r1.uvalue=[0, 1]"]
 ---
 test-case: "assume [-1, 1] <= -2 narrows"
 pre: ["r1.type=number", "r1.svalue=[-1, 1]"]
 code:
   <start>: |
     assume r1 <= -2
-post: ["r1.type=number", "r1.svalue=[0, 1]", "r1.uvalue=[0, 1]", "r1.svalue=r1.uvalue"]
+post: ["r1.type=number", "r1.svalue=[0, 1]", "r1.uvalue=[0, 1]"]
 ---
-test-case: "assume [-1, 2] > 1 nop"
+test-case: "assume [-1, 2] > 1 narrows uvalue"
 pre: ["r1.type=number", "r1.svalue=[-1, 2]"]
 code:
   <start>: |
     assume r1 > 1
-post: ["r1.type=number", "r1.svalue=[-1, 2]"]
+post: ["r1.type=number", "r1.svalue=[-1, 2]", "r1.uvalue=[2, 18446744073709551615]"]
 ---
-test-case: "assume [-1, 2] >= 2 nop"
+test-case: "assume [-1, 2] >= 2 narrows uvalue"
 pre: ["r1.type=number", "r1.svalue=[-1, 2]"]
 code:
   <start>: |
     assume r1 > 1
-post: ["r1.type=number", "r1.svalue=[-1, 2]"]
+post: ["r1.type=number", "r1.svalue=[-1, 2]", "r1.uvalue=[2, 18446744073709551615]"]
 ---
 test-case: "assume [-1, 1] w> 1 nop"
 pre: ["r1.type=number", "r1.svalue=[-1, 1]"]
@@ -799,12 +811,12 @@ code:
     assume w1 > 1
 post: ["r1.type=number", "r1.svalue=[-1, 1]"]
 ---
-test-case: "assume TOP > 1 nop"
+test-case: "assume TOP > 1 narrows uvalue"
 pre: ["r1.type=number"]
 code:
   <start>: |
     assume r1 > 1
-post: ["r1.type=number"]
+post: ["r1.type=number", "r1.uvalue=[2, 18446744073709551615]"]
 ---
 test-case: "assume TOP w> 1 nop"
 pre: ["r1.type=number"]
@@ -828,18 +840,18 @@ code:
 post: ["r1.type=number", "r1.svalue=-1", "r1.uvalue=18446744073709551615"]
 ---
 test-case: "assume [-2, -1] > 1 nop"
-pre: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614, 18446744073709551615]"]
 code:
   <start>: |
     assume r1 > 1
-post: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614ll, 18446744073709551615ll]"]
+post: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614, 18446744073709551615]"]
 ---
 test-case: "assume [-2, -1] w> 1 nop"
-pre: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614, 18446744073709551615]"]
 code:
   <start>: |
     assume w1 > 1
-post: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614ll, 18446744073709551615ll]"]
+post: ["r1.type=number", "r1.svalue=[-2, -1]", "r1.uvalue=[18446744073709551614, 18446744073709551615]"]
 ---
 test-case: "assume -1 > INT_MAX nop"
 pre: []
@@ -849,7 +861,7 @@ code:
     r2 = 9223372036854775807ll
     assume r1 > r2
 post: ["r1.type=number", "r1.svalue=-1", "r1.uvalue=18446744073709551615",
-       "r2.type=number", "r2.svalue=9223372036854775807", "r2.uvalue=9223372036854775807"]
+       "r2.type=number", "r2.svalue=9223372036854775807", "r2.uvalue=9223372036854775807", "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume -1 w> INT32_MAX nop"
 pre: []
@@ -860,37 +872,37 @@ code:
 post: ["r1.type=number", "r1.svalue=-1", "r1.uvalue=18446744073709551615"]
 ---
 test-case: "assume [INT_MIN+1, -1] > INT_MAX nop"
-pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]"]
 code:
   <start>: |
     r2 = 9223372036854775807ll
     assume r1 > r2
-post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809ll, 18446744073709551615ll]",
-       "r2.type=number", "r2.svalue=9223372036854775807", "r2.uvalue=9223372036854775807"]
+post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]",
+       "r2.type=number", "r2.svalue=9223372036854775807", "r2.uvalue=9223372036854775807", "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume [INT32_MIN, -1] w> INT32_MAX nop"
-pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]"]
 code:
   <start>: |
     assume w1 > 2147483647
-post: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968ll, 18446744073709551615ll]"]
+post: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]"]
 ---
 test-case: "assume [INT_MIN+1, -1] > [0, INT_MAX] nop"
-pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.svalue=[9223372036854775809ll, 18446744073709551615ll]",
+pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]",
       "r2.type=number", "r2.svalue=[0, 9223372036854775807]", "r2.uvalue=[0, 9223372036854775807]"]
 code:
   <start>: |
     assume r1 > r2
-post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.svalue=[9223372036854775809ll, 18446744073709551615ll]",
-       "r2.type=number", "r2.svalue=[0, 9223372036854775807]", "r2.uvalue=[0, 9223372036854775807]"]
+post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]",
+       "r2.type=number", "r2.svalue=[0, 9223372036854775807]", "r2.uvalue=[0, 9223372036854775807]", "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume [INT32_MIN, -1] w> [0, INT32_MAX] nop"
-pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968ll, 18446744073709551615ll]",
+pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]",
       "r2.type=number", "r2.svalue=[0, 2147483647]", "r2.uvalue=[0, 2147483647]"]
 code:
   <start>: |
     assume w1 > r2
-post: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968ll, 18446744073709551615ll]",
+post: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]",
        "r2.type=number", "r2.svalue=[0, 2147483647]", "r2.uvalue=[0, 2147483647]"]
 ---
 test-case: "assume [0, INT_MAX] <= [0, INT_MAX] implies relation"
@@ -901,8 +913,8 @@ code:
     assume r1 <= r2
 post: ["r1.type=number", "r1.svalue=[0, 9223372036854775807]", "r1.uvalue=[0, 9223372036854775807]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[0, 9223372036854775807]", "r2.uvalue=[0, 9223372036854775807]", "r2.svalue=r2.uvalue",
-       "r1.svalue-r2.svalue<=0",
-       "r1.uvalue-r2.uvalue<=0"]
+       "r1.svalue-r2.svalue<=0", "r1.svalue-r2.uvalue<=0",
+       "r1.uvalue-r2.svalue<=0", "r1.uvalue-r2.uvalue<=0"]
 ---
 test-case: "assume [0, INT32_MAX] w<= [0, INT32_MAX] implies relation"
 pre: ["r1.type=number", "r1.svalue=[0, 2147483647]", "r1.uvalue=[0, 2147483647]", "r1.svalue=r1.uvalue",
@@ -912,19 +924,19 @@ code:
     assume w1 <= r2
 post: ["r1.type=number", "r1.svalue=[0, 2147483647]", "r1.uvalue=[0, 2147483647]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[0, 2147483647]", "r2.uvalue=[0, 2147483647]", "r2.svalue=r2.uvalue",
-       "r1.svalue-r2.svalue<=0",
-       "r1.uvalue-r2.uvalue<=0"]
+       "r1.svalue-r2.svalue<=0", "r1.svalue-r2.uvalue<=0",
+       "r1.uvalue-r2.svalue<=0", "r1.uvalue-r2.uvalue<=0"]
 ---
 test-case: "assume [0, INT_MAX] >= [0, INT_MAX] implies relation"
-pre: ["r1.type=number", "r1.svalue=[0, 9223372036854775807]", "r1.uvalue=[0, 9223372036854775802]", "r1.svalue=r1.uvalue",
+pre: ["r1.type=number", "r1.svalue=[0, 9223372036854775807]", "r1.uvalue=[0, 9223372036854775807]", "r1.svalue=r1.uvalue",
       "r2.type=number", "r2.svalue=[0, 9223372036854775807]", "r2.uvalue=[0, 9223372036854775807]", "r2.svalue=r2.uvalue"]
 code:
   <start>: |
     assume r1 >= r2
 post: ["r1.type=number", "r1.svalue=[0, 9223372036854775807]", "r1.uvalue=[0, 9223372036854775807]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[0, 9223372036854775807]", "r2.uvalue=[0, 9223372036854775807]", "r2.svalue=r2.uvalue",
-       "r2.svalue-r1.svalue<=0",
-       "r2.uvalue-r1.uvalue<=0"]
+       "r2.svalue-r1.svalue<=0", "r2.svalue-r1.uvalue<=0",
+       "r2.uvalue-r1.svalue<=0", "r2.uvalue-r1.uvalue<=0"]
 ---
 test-case: "assume [0, INT32_MAX] w>= [0, INT32_MAX] implies relation"
 pre: ["r1.type=number", "r1.svalue=[0, 2147483647]", "r1.uvalue=[0, 2147483647]", "r1.svalue=r1.uvalue",
@@ -934,28 +946,28 @@ code:
     assume w1 >= r2
 post: ["r1.type=number", "r1.svalue=[0, 2147483647]", "r1.uvalue=[0, 2147483647]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[0, 2147483647]", "r2.uvalue=[0, 2147483647]", "r2.svalue=r2.uvalue",
-       "r2.svalue-r1.svalue<=0",
-       "r2.uvalue-r1.uvalue<=0"]
+       "r2.svalue-r1.svalue<=0", "r2.svalue-r1.uvalue<=0",
+       "r2.uvalue-r1.svalue<=0", "r2.uvalue-r1.uvalue<=0"]
 ---
 test-case: "assume [INT_MIN, -1] >= [INT_MIN, -1] implies relation"
-pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809ll, 18446744073709551615ll]",
-      "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]",
+      "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809, 18446744073709551615]"]
 code:
   <start>: |
     assume r1 >= r2
-post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809ll, 18446744073709551615ll]",
-       "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809ll, 18446744073709551615ll]",
+post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]",
+       "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809, 18446744073709551615]",
        "r2.svalue-r1.svalue<=0",
        "r2.uvalue-r1.uvalue<=0"]
 ---
 test-case: "assume [INT32_MIN, -1] w>= [INT32_MIN, -1] implies relation"
-pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.svalue=[18446744071562067968ll, 18446744073709551615ll]",
-      "r2.type=number", "r2.svalue=[-2147483648, -1]", "r2.svalue=[18446744071562067968ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]",
+      "r2.type=number", "r2.svalue=[-2147483648, -1]", "r2.uvalue=[18446744071562067968, 18446744073709551615]"]
 code:
   <start>: |
     assume w1 >= r2
-post: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.svalue=[18446744071562067968ll, 18446744073709551615ll]",
-       "r2.type=number", "r2.uvalue=[-2147483648, -1]", "r2.svalue=[18446744071562067968ll, 18446744073709551615ll]",
+post: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]",
+       "r2.type=number", "r2.svalue=[-2147483648, -1]", "r2.uvalue=[18446744071562067968, 18446744073709551615]",
        "r2.svalue-r1.svalue<=0",
        "r2.uvalue-r1.uvalue<=0"]
 ---
@@ -967,8 +979,8 @@ code:
     assume r1 < r2
 post: ["r1.type=number", "r1.svalue=[0, 9223372036854775806]", "r1.uvalue=[0, 9223372036854775806]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[1, 9223372036854775807]", "r2.uvalue=[1, 9223372036854775807]", "r2.svalue=r2.uvalue",
-       "r1.svalue-r2.svalue<=-1",
-       "r1.uvalue-r2.uvalue<=-1"]
+       "r1.svalue-r2.svalue<=-1", "r1.svalue-r2.uvalue<=-1",
+       "r1.uvalue-r2.svalue<=-1", "r1.uvalue-r2.uvalue<=-1"]
 ---
 test-case: "assume [0, INT32_MAX] w< [0, INT32_MAX] implies narrowing and relation"
 pre: ["r1.type=number", "r1.svalue=[0, 2147483647]", "r1.uvalue=[0, 2147483647]", "r1.svalue=r1.uvalue",
@@ -978,28 +990,28 @@ code:
     assume w1 < r2
 post: ["r1.type=number", "r1.svalue=[0, 2147483646]", "r1.uvalue=[0, 2147483646]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[1, 2147483647]", "r2.uvalue=[1, 2147483647]", "r2.svalue=r2.uvalue",
-       "r1.svalue-r2.svalue<=-1",
-       "r1.uvalue-r2.uvalue<=-1"]
+       "r1.svalue-r2.svalue<=-1", "r1.svalue-r2.uvalue<=-1",
+       "r1.uvalue-r2.svalue<=-1", "r1.uvalue-r2.uvalue<=-1"]
 ---
 test-case: "assume [INT_MIN+1, -1] < [INT_MIN+1, -1] implies narrowing and relation"
-pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809ll, 18446744073709551615ll]",
-      "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]",
+      "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809, 18446744073709551615]"]
 code:
   <start>: |
     assume r1 < r2
-post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -2]", "r1.uvalue=[9223372036854775809ll, 18446744073709551614ll]",
-       "r2.type=number", "r2.svalue=[-9223372036854775806, -1]", "r2.uvalue=[9223372036854775806, 18446744073709551615ll]",
+post: ["r1.type=number", "r1.svalue=[-9223372036854775807, -2]", "r1.uvalue=[9223372036854775809, 18446744073709551614]",
+       "r2.type=number", "r2.svalue=[-9223372036854775806, -1]", "r2.uvalue=[9223372036854775810, 18446744073709551615]",
        "r1.svalue-r2.svalue<=-1",
        "r1.uvalue-r2.uvalue<=-1"]
 ---
 test-case: "assume [INT32_MIN, -1] w< [INT_MIN32, -1] implies narrowing and relation"
-pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968ll, 18446744073709551615ll]",
-      "r2.type=number", "r2.svalue=[-2147483648, -1]", "r2.uvalue=[18446744071562067968ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]",
+      "r2.type=number", "r2.svalue=[-2147483648, -1]", "r2.uvalue=[18446744071562067968, 18446744073709551615]"]
 code:
   <start>: |
     assume w1 < r2
-post: ["r1.type=number", "r1.svalue=[-2147483648, -2]", "r1.uvalue=[18446744071562067968ll, 18446744073709551614ll]",
-       "r2.type=number", "r2.svalue=[-2147483647, -1]", "r2.uvalue=[18446744071562067969ll, 18446744073709551615ll]",
+post: ["r1.type=number", "r1.svalue=[-2147483648, -2]", "r1.uvalue=[18446744071562067968, 18446744073709551614]",
+       "r2.type=number", "r2.svalue=[-2147483647, -1]", "r2.uvalue=[18446744071562067969, 18446744073709551615]",
        "r1.svalue-r2.svalue<=-1",
        "r1.uvalue-r2.uvalue<=-1"]
 ---
@@ -1011,8 +1023,8 @@ code:
     assume r1 > r2
 post: ["r1.type=number", "r1.svalue=[1, 9223372036854775807]", "r1.uvalue=[1, 9223372036854775807]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[0, 9223372036854775806]", "r2.uvalue=[0, 9223372036854775806]", "r2.svalue=r2.uvalue",
-       "r2.svalue-r1.svalue<=-1",
-       "r2.uvalue-r1.uvalue<=-1"]
+       "r2.svalue-r1.svalue<=-1", "r2.svalue-r1.uvalue<=-1",
+       "r2.uvalue-r1.svalue<=-1", "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume [0, INT32_MAX] w> [0, INT32_MAX] implies narrowing and relation"
 pre: ["r1.type=number", "r1.svalue=[0, 2147483647]", "r1.uvalue=[0, 2147483647]", "r1.svalue=r1.uvalue",
@@ -1022,28 +1034,28 @@ code:
     assume w1 > r2
 post: ["r1.type=number", "r1.svalue=[1, 2147483647]", "r1.uvalue=[1, 2147483647]", "r1.svalue=r1.uvalue",
        "r2.type=number", "r2.svalue=[0, 2147483646]", "r2.uvalue=[0, 2147483646]", "r2.svalue=r2.uvalue",
-       "r2.svalue-r1.svalue<=-1",
-       "r2.uvalue-r1.uvalue<=-1"]
+       "r2.svalue-r1.svalue<=-1", "r2.svalue-r1.uvalue<=-1",
+       "r2.uvalue-r1.svalue<=-1", "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume [INT_MIN+1, -1] > [INT_MIN+1, -1] implies narrowing and relation"
-pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809ll, 18446744073709551615ll]",
-      "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-9223372036854775807, -1]", "r1.uvalue=[9223372036854775809, 18446744073709551615]",
+      "r2.type=number", "r2.svalue=[-9223372036854775807, -1]", "r2.uvalue=[9223372036854775809, 18446744073709551615]"]
 code:
   <start>: |
     assume r1 > r2
-post: ["r1.type=number", "r1.svalue=[-9223372036854775806, -1]", "r1.uvalue=[9223372036854775810ll, 18446744073709551615ll]",
-       "r2.type=number", "r2.svalue=[-9223372036854775807, -2]", "r2.uvalue=[9223372036854775809ll, 18446744073709551614ll]",
+post: ["r1.type=number", "r1.svalue=[-9223372036854775806, -1]", "r1.uvalue=[9223372036854775810, 18446744073709551615]",
+       "r2.type=number", "r2.svalue=[-9223372036854775807, -2]", "r2.uvalue=[9223372036854775809, 18446744073709551614]",
        "r2.svalue-r1.svalue<=-1",
        "r2.uvalue-r1.uvalue<=-1"]
 ---
 test-case: "assume [INT32_MIN, -1] w> [INT32_MIN, -1] implies narrowing and relation"
-pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968ll, 18446744073709551615ll]",
-      "r2.type=number", "r2.svalue=[-2147483648, -1]", "r2.uvalue=[18446744071562067968ll, 18446744073709551615ll]"]
+pre: ["r1.type=number", "r1.svalue=[-2147483648, -1]", "r1.uvalue=[18446744071562067968, 18446744073709551615]",
+      "r2.type=number", "r2.svalue=[-2147483648, -1]", "r2.uvalue=[18446744071562067968, 18446744073709551615]"]
 code:
   <start>: |
     assume w1 > r2
-post: ["r1.type=number", "r1.svalue=[-2147483647, -1]", "r1.uvalue=[18446744071562067969ll, 18446744073709551615ll]",
-       "r2.type=number", "r2.svalue=[-2147483648, -2]", "r2.uvalue=[18446744071562067968ll, 18446744073709551614ll]",
+post: ["r1.type=number", "r1.svalue=[-2147483647, -1]", "r1.uvalue=[18446744071562067969, 18446744073709551615]",
+       "r2.type=number", "r2.svalue=[-2147483648, -2]", "r2.uvalue=[18446744071562067968, 18446744073709551614]",
        "r2.svalue-r1.svalue<=-1",
        "r2.uvalue-r1.uvalue<=-1"]
 ---
@@ -1054,7 +1066,8 @@ code:
   <start>: |
     assume r1 <= r2
 post: ["r1.type=number", "r1.svalue=[-1, 1]",
-       "r2.type=number", "r2.svalue=[-1, 1]"]
+       "r2.type=number", "r2.svalue=[-1, 1]",
+       "r1.uvalue-r2.uvalue<=0"]
 ---
 test-case: "assume [-1, 1] w<= [-1, 1] nop"
 pre: ["r1.type=number", "r1.svalue=[-1, 1]",
@@ -1064,3 +1077,31 @@ code:
     assume w1 <= r2
 post: ["r1.type=number", "r1.svalue=[-1, 1]",
        "r2.type=number", "r2.svalue=[-1, 1]"]
+---
+test-case: "assume 11 != 11 implies bottom"
+pre: ["r1.type=number", "r1.svalue=11", "r1.uvalue=11"]
+code:
+  <start>: assume r1 != 11
+post: []
+messages:
+  - "0: Code is unreachable after 0"
+---
+test-case: "assume [0, 1] != 1 narrows to 0"
+pre: ["r1.type=number", "r1.svalue=[0, 1]", "r1.uvalue=[0, 1]"]
+code:
+  <start>: assume r1 != 1
+post: ["r1.type=number", "r1.svalue=0", "r1.uvalue=0"]
+---
+test-case: "assume [1, 2] != 1 narrows to 2"
+pre: ["r1.type=number", "r1.svalue=[1, 2]", "r1.uvalue=[1, 2]"]
+code:
+  <start>: assume r1 != 1
+post: ["r1.type=number", "r1.svalue=2", "r1.uvalue=2"]
+---
+test-case: "assume 4294967307 w!= 11 implies bottom"
+pre: ["r1.type=number", "r1.svalue=4294967307", "r1.uvalue=4294967307"]
+code:
+  <start>: assume w1 != 11
+post: []
+messages:
+  - "0: Code is unreachable after 0"
