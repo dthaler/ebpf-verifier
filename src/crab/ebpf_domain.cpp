@@ -826,6 +826,7 @@ void ebpf_domain_t::bitwise_and(variable_t lhss, variable_t lhsu, variable_t op2
     apply_unsigned(m_inv, crab::bitwise_binop_t::AND, lhss, lhsu, lhsu, op2, finite_width);
 }
 void ebpf_domain_t::bitwise_and(variable_t lhss, variable_t lhsu, const number_t& op2) {
+    // Use finite width 64 to make the svalue be set as well as the uvalue.
     apply_unsigned(m_inv, crab::bitwise_binop_t::AND, lhss, lhsu, lhsu, op2, 64);
 }
 void ebpf_domain_t::bitwise_or(variable_t lhss, variable_t lhsu, variable_t op2, int finite_width) {
@@ -1188,7 +1189,7 @@ void ebpf_domain_t::operator()(const Un& stmt) {
                 if (n->fits_cast_to_int64()) {
                     input = (decltype(input))n.value().cast_to_sint64();
                     decltype(input) output = be_or_le(input);
-                    m_inv.set(dst.svalue, crab::interval_t(number_t(output), number_t(output)));
+                    m_inv.set(v, crab::interval_t(number_t(output), number_t(output)));
                     return;
                 }
             }

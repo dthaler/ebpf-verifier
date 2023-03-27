@@ -578,7 +578,7 @@ std::optional<linear_expression_t> array_domain_t::load(NumAbsDomain& inv, data_
                 }
                 if (size == 8) {
                     uint64_t b = *(uint64_t*)result_buffer;
-                    return b;
+                    return (kind == data_kind_t::uvalues) ? number_t(b) : number_t((int64_t)b);
                 }
             }
         }
